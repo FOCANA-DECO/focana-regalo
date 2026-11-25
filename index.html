@@ -159,15 +159,18 @@ h1 em{font-style:italic;font-weight:500;color:var(--champagne)}
   // ——— Datos del regalo: viajan dentro del link (#g=...), no se guardan en ningún servidor ———
   function leer() {
     try {
-      const m = /(?:^|[#&])g=([A-Za-z0-9_-]+)/.exec(location.hash);
-      if (!m) return null;
-      const b = m[1].replace(/-/g, "+").replace(/_/g, "/");
-      const bin = atob(b + "=".repeat((4 - b.length % 4) % 4));
-      const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
-      const o = JSON.parse(new TextDecoder().decode(bytes));
-      if (!o || typeof o !== "object") return null;
+      const h = new URLSearchParams(location.hash.replace(/^#/, ""));
       const s = (v, n) => String(v == null ? "" : v).slice(0, n);
-      return { p: s(o.p, 40), d: s(o.d, 40), m: s(o.m, 220), c: s(o.c, 24), v: s(o.v, 60) };
+      if (h.has("g")) { // formato largo: JSON comprimido en base64
+        const b = h.get("g").replace(/-/g, "+").replace(/_/g, "/");
+        const bin = atob(b + "=".repeat((4 - b.length % 4) % 4));
+        const o = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, ch => ch.charCodeAt(0))));
+        if (!o || typeof o !== "object") return null;
+        return { p: s(o.p, 40), d: s(o.d, 40), m: s(o.m, 220), c: s(o.c, 24), v: s(o.v, 60) };
+      }
+      if (h.has("p") || h.has("c")) // formato corto: #p=Ari%20y%20Nati&c=GIN-AB12
+        return { p: s(h.get("p"), 40), d: s(h.get("d"), 40), m: s(h.get("m"), 220), c: s(h.get("c"), 24), v: s(h.get("v"), 60) };
+      return null;
     } catch (e) { return null; }
   }
   const real = leer();
